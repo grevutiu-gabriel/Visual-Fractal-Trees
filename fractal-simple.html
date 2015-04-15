@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<style>
+    body{
+        margin :0px;
+        padding : 0px;
+    }
+    canvas{
+        position: absolute;
+        left: 0px;
+        top: 0px;
+        cursor: pointer;
+    }
+</style>
+<body>
+<canvas id="canvas" width="600" height="500"></canvas>
+<script type = text/javascript>
+    function CanvasMouseAnimation(selector,frame){
+        this.canvas = document.querySelector(selector)
+        this.context=this.canvas.getContext && this.canvas.getContext('2d')
+        this.setSize = function(){
+            this.canvas.width = document.documentElement.clientWidth
+            this.canvas.height = document.documentElement.clientHeight
+        }
+        this.frame = function(){
+            frame(this.context,this.mouse.x,this.mouse.y)
+            window.requestAnimationFrame(this.frame.bind(this))
+        }
+        window.onmousemove = function (event) {
+            if(!this.mouse){
+                this.mouse = {}
+                window.onmousemove(event)
+                this.frame()
+            }
+            this.mouse.x = event.x
+            this.mouse.y = event.y
+
+        }.bind(this)
+        window.onload = window.onresize = this.setSize.bind(this)
+    }
+
+    function drawBranch(context,root,leaf,NextLeaf,alpha,delta,depth,splits){
+        var head = {x:root.x+leaf*Math.cos(alpha),y:root.y +leaf * Math.sin(alpha)}
+        context.strokeStyle ='#000'
+        context.beginPath()
+        context.moveTo(root.x,root.y)
+        context.lineTo(head.x,head.y)
+        context.stroke()
+        for(var i = 0;depth>= 1 && i<splits;i++){
+            drawBranch(context,head,NextLeaf,NextLeaf*NextLeaf/leaf,alpha+(1-i*2)*delta,delta,depth-1,splits)
+        }
+    }
+
+    function dist(p1,p2){
+        return Math.sqrt(Math.pow(p1.x-p2.x,2)+Math.pow(p1.y-p2.y,2))
+    }
+    function angle(p1,p2){
+        return Math.atan2(p1.y-p2.y,p1.x-p2.x)
+    }
+    var splits =2
+    var lastCursor
+    var canvasMouseAnimation = new CanvasMouseAnimation('#canvas',function(context,x,y){
+        var cursor = {x:x,y:y}
+        if (lastCursor && lastCursor.x === cursor.x && lastCursor.y === cursor.y) return
+        lastCursor = cursor
+        var size = {x:context.canvas.width,y:context.canvas.height}
+        var root = {x:0.5 * size.x, y:1.0 * size.y}
+        var head = {x:0.5 *size.x,y:0.7 * size.y}
+
+        var leaf = dist(root,head)
+        var NextLeaf = dist(head,cursor)
+        var up = angle(head,root)
+        var turn = up - angle(cursor,head)
+        var depth = Math.log(1024)/Math.log(splits)
+        context.clearRect(0,0,size.x,size.y)
+        drawBranch(context,root,leaf,NextLeaf,up,turn,depth,splits)
+    })
+</script>
+</body>
+</html>

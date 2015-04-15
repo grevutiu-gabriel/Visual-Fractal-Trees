@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en" class=" webkit chrome win js">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <meta name="robots" content="noarchive, nosnippet"/>
+    <style>
+        body {
+            margin: 0px;
+            padding: 0px;
+        }
+
+        canvas {
+            position: absolute;
+            left: 0px;
+            top: 0px;
+            cursor: pointer;
+        }
+
+        div#text {
+            position: absolute;
+            left: 10px;
+            top: 10px;
+            padding: 10px;
+            background-color: rgba(200, 200, 200, 0.9);
+        }
+
+        div#credit {
+            position: absolute;
+            right: 10px;
+            bottom: 10px;
+        }
+
+        div#nonChrome {
+            position: absolute;
+            left: 10px;
+            bottom: 10px;
+        }
+
+        .chrome div#nonChrome {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<canvas id="canvas" width="1349" height="631">
+    <div>Sorry, but your browser does not support the Canvas element!</div>
+</canvas>
+
+<script>
+    'use strict';
+
+    function CanvasMouseAnimation(selector, frame) {
+        this.canvas = document.querySelector(selector)
+        if (!this.canvas) throw new Error('selector "' + selector + '" not found!')
+        this.ctx = this.canvas.getContext && this.canvas.getContext('2d')
+        if (!this.ctx) throw new Error('ctx not found! Is element a canvas?')
+        this.setSize = function () {
+            this.canvas.width = document.documentElement.clientWidth
+            this.canvas.height = document.documentElement.clientHeight
+        }
+        this.frame = function () {
+            frame(this.ctx, this.mouse.x, this.mouse.y)
+            window.requestAnimationFrame(this.frame.bind(this))
+        }
+        window.onmousemove = function (event) {
+            if (!this.mouse) {
+                this.mouse = {}
+                window.onmousemove(event)
+                this.frame()
+            }
+            this.mouse.x = event.x
+            this.mouse.y = event.y
+        }.bind(this)
+        window.onload = window.onresize = this.setSize.bind(this)
+    }
+
+    ///////////////////////////////////////////////
+
+    function drawBranch(ctx, root, l, lNext, alpha, delta, depth, splits) {
+        var head = {x: root.x + l * Math.cos(alpha), y: root.y + l * Math.sin(alpha)}
+        ctx.strokeStyle = '#000'
+        ctx.beginPath()
+        ctx.moveTo(root.x, root.y)
+        ctx.lineTo(head.x, head.y)
+        ctx.stroke()
+        for (var i = 0; depth >= 1 && i < splits; i++) {
+            drawBranch(ctx, head, lNext, lNext * lNext / l, alpha + (1 - i * 2) * delta, delta, depth - 1, splits)
+        }
+    }
+
+    function dist(p1, p2) {
+        return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2))
+    }
+
+    function angle(p1, p2) {
+        return Math.atan2(p1.y - p2.y, p1.x - p2.x)
+    }
+
+    var splits = 2
+    var lastCursor
+
+    var canvasMouseAnimation = new CanvasMouseAnimation('#canvas', function (ctx, x, y) {
+        var cursor = {x: x, y: y}
+        if (lastCursor && lastCursor.x === cursor.x && lastCursor.y === cursor.y) return
+        lastCursor = cursor
+
+        var size = {x: ctx.canvas.width, y: ctx.canvas.height}
+        var root = {x: 0.5 * size.x, y: 1.0 * size.y}
+        var head = {x: 0.5 * size.x, y: 0.7 * size.y}
+
+        var l = dist(root, head)
+        var lNext = dist(head, cursor)
+        var up = angle(head, root)
+        var turn = up - angle(cursor, head)
+        var depth = Math.log(1024) / Math.log(splits)
+
+        ctx.clearRect(0, 0, size.x, size.y)
+        drawBranch(ctx, root, l, lNext, up, turn, depth, splits)
+    })
+
+
+</script>
+</body>
+</html>
